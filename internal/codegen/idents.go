@@ -26,6 +26,7 @@ var (
 	IOReadAllIdent                 = GoIdent{GoImportPath: "io", GoName: "ReadAll"}
 
 	// SOAP library types
+<<<<<<< HEAD
 	SOAPClientIdent               = GoIdent{GoImportPath: "github.com/way-platform/soap-go", GoName: "Client"}
 	SOAPClientOptionIdent         = GoIdent{GoImportPath: "github.com/way-platform/soap-go", GoName: "ClientOption"}
 	SOAPNewClientIdent            = GoIdent{GoImportPath: "github.com/way-platform/soap-go", GoName: "NewClient"}
@@ -37,6 +38,7 @@ var (
 	SOAPWithBodyIdent             = GoIdent{GoImportPath: "github.com/way-platform/soap-go", GoName: "WithBody"}
 	SOAPWithHeaderContentIdent    = GoIdent{GoImportPath: "github.com/way-platform/soap-go", GoName: "WithHeaderContent"}
 	SOAPUnmarshalHeaderEntryIdent = GoIdent{GoImportPath: "github.com/way-platform/soap-go", GoName: "UnmarshalHeaderEntry"}
+	SOAPXSDDateTimeIdent          = GoIdent{GoImportPath: "github.com/way-platform/soap-go", GoName: "XSDDateTime"}
 
 	// Built-in types (no import path needed)
 	StringIdent = GoIdent{GoImportPath: "", GoName: "string"}
