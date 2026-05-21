@@ -166,24 +166,17 @@ func generateInlineEnumTypes(g *codegen.File, ctx *SchemaContext) {
 	g.P("// Inline enumeration types")
 	g.P()
 
-	// Collect unique enum types to generate (avoiding duplicates from deduplication)
-	uniqueEnums := make(map[string]InlineEnumInfo)
-	for _, enumInfo := range ctx.inlineEnums {
-		if !enumInfo.Generated {
-			uniqueEnums[enumInfo.TypeName] = enumInfo
-		}
-	}
-
-	// Sort enum type names for deterministic output
+	// Owners only (key == TypeName); reusers can carry a different enum order.
 	var typeNames []string
-	for typeName := range uniqueEnums {
-		typeNames = append(typeNames, typeName)
+	for key, info := range ctx.inlineEnums {
+		if key == info.TypeName && !info.Generated {
+			typeNames = append(typeNames, info.TypeName)
+		}
 	}
 	sort.Strings(typeNames)
 
-	// Generate each unique inline enum type
 	for _, typeName := range typeNames {
-		enumInfo := uniqueEnums[typeName]
+		enumInfo := ctx.inlineEnums[typeName]
 		generateInlineEnumType(g, &enumInfo)
 
 		// Mark all enums with this type name as generated

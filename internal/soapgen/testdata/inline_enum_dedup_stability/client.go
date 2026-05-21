@@ -1,0 +1,47 @@
+package inline_enum_dedup_stability
+
+import (
+	"context"
+	"encoding/xml"
+	"fmt"
+	soap "github.com/tnymlr/soap-go"
+)
+
+// ClientOption configures a Client.
+type ClientOption = soap.ClientOption
+
+// Client is a SOAP client for this service.
+type Client struct {
+	*soap.Client
+}
+
+// NewClient creates a new SOAP client.
+func NewClient(opts ...ClientOption) (*Client, error) {
+	soapOpts := append([]soap.ClientOption{
+		soap.WithEndpoint("http://example.com/stability"),
+	}, opts...)
+	soapClient, err := soap.NewClient(soapOpts...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SOAP client: %w", err)
+	}
+	return &Client{
+		Client: soapClient,
+	}, nil
+}
+
+// DoSomething executes the DoSomething SOAP operation.
+func (c *Client) DoSomething(ctx context.Context, req *DoSomethingRequestWrapper, opts ...ClientOption) (*DoSomethingResponseWrapper, error) {
+	reqEnvelope, err := soap.NewEnvelope(soap.WithBody(req))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SOAP envelope: %w", err)
+	}
+	respEnvelope, err := c.Call(ctx, "DoSomething", reqEnvelope, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("SOAP call failed: %w", err)
+	}
+	var result DoSomethingResponseWrapper
+	if err := xml.Unmarshal(respEnvelope.Body.Content, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response body: %w", err)
+	}
+	return &result, nil
+}

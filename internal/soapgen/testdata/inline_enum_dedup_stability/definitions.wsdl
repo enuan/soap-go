@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://example.com/dedupstability"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="http://example.com/dedupstability">
+
+    <types>
+        <xsd:schema targetNamespace="http://example.com/dedupstability"
+            xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            elementFormDefault="qualified">
+
+            <!-- Owner: registers first, Mode source order is alpha, beta. -->
+            <xsd:element name="DoSomethingRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="Mode">
+                            <xsd:simpleType>
+                                <xsd:restriction base="xsd:string">
+                                    <xsd:enumeration value="alpha" />
+                                    <xsd:enumeration value="beta" />
+                                </xsd:restriction>
+                            </xsd:simpleType>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <!-- Reuser: same value set, reversed source order. Dedup must not
+                 pick this entry's SimpleType when emitting the shared type. -->
+            <xsd:element name="DoSomethingResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="Mode">
+                            <xsd:simpleType>
+                                <xsd:restriction base="xsd:string">
+                                    <xsd:enumeration value="beta" />
+                                    <xsd:enumeration value="alpha" />
+                                </xsd:restriction>
+                            </xsd:simpleType>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+        </xsd:schema>
+    </types>
+
+    <message name="DoSomethingRequest">
+        <part name="parameters" element="tns:DoSomethingRequest" />
+    </message>
+
+    <message name="DoSomethingResponse">
+        <part name="parameters" element="tns:DoSomethingResponse" />
+    </message>
+
+    <portType name="StabilityPort">
+        <operation name="DoSomething">
+            <input message="tns:DoSomethingRequest" />
+            <output message="tns:DoSomethingResponse" />
+        </operation>
+    </portType>
+
+    <binding name="StabilityBinding" type="tns:StabilityPort">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http" />
+        <operation name="DoSomething">
+            <soap:operation soapAction="DoSomething" />
+            <input><soap:body use="literal" /></input>
+            <output><soap:body use="literal" /></output>
+        </operation>
+    </binding>
+
+    <service name="StabilityService">
+        <port name="StabilityPort" binding="tns:StabilityBinding">
+            <soap:address location="http://example.com/stability" />
+        </port>
+    </service>
+
+</definitions>
