@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Regression test: the Microsoft serialization schema shipped in many .NET
+  WSDLs declares local simple types that shadow XSD primitives, e.g.
+  <xs:simpleType name="duration"><xs:restriction base="xs:duration"/>. The
+  generator used to recurse forever resolving the restriction base (stack
+  overflow). Such types must map to the primitive Go type instead.
+-->
+<wsdl:definitions name="SelfReferentialSimpleType" targetNamespace="http://example.com/selfref"
+    xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:tns="http://example.com/selfref">
+  <wsdl:types>
+    <xs:schema targetNamespace="http://example.com/selfref" elementFormDefault="qualified">
+      <xs:simpleType name="duration">
+        <xs:restriction base="xs:duration"/>
+      </xs:simpleType>
+      <xs:simpleType name="char">
+        <xs:restriction base="xs:int"/>
+      </xs:simpleType>
+      <xs:element name="Measure">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="Elapsed" type="tns:duration" minOccurs="0"/>
+            <xs:element name="Code" type="tns:char" minOccurs="0"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="MeasureResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="Ok" type="xs:boolean" minOccurs="0"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:schema>
+  </wsdl:types>
+  <wsdl:message name="MeasureIn">
+    <wsdl:part name="parameters" element="tns:Measure"/>
+  </wsdl:message>
+  <wsdl:message name="MeasureOut">
+    <wsdl:part name="parameters" element="tns:MeasureResponse"/>
+  </wsdl:message>
+  <wsdl:portType name="MeasurePortType">
+    <wsdl:operation name="Measure">
+      <wsdl:input message="tns:MeasureIn"/>
+      <wsdl:output message="tns:MeasureOut"/>
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="MeasureBinding" type="tns:MeasurePortType">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http"/>
+    <wsdl:operation name="Measure">
+      <soap:operation soapAction="http://example.com/selfref/Measure" style="document"/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="MeasureService">
+    <wsdl:port name="MeasurePort" binding="tns:MeasureBinding">
+      <soap:address location="http://example.com/selfref"/>
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

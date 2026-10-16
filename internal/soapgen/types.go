@@ -58,12 +58,22 @@ func toGoName(name string) string {
 
 // mapXSDTypeToGoWithContext maps XSD types to Go types using schema context for better resolution
 func mapXSDTypeToGoWithContext(xsdType string, ctx *SchemaContext) string {
+	return mapXSDTypeToGoWithContextVisited(xsdType, ctx, nil)
+}
+
+// mapXSDTypeToGoWithContextVisited is mapXSDTypeToGoWithContext with a
+// recursion guard. Some real-world schemas declare a local simpleType whose
+// name shadows an XSD primitive (e.g. a local "duration" restricted from
+// xs:duration). Resolving the restriction base strips the namespace prefix,
+// which resolves back to the same local type. `visited` breaks that cycle and
+// falls through to the primitive mapping instead.
+func mapXSDTypeToGoWithContextVisited(xsdType string, ctx *SchemaContext, visited map[string]bool) string {
 	if xsdType == "" {
 		return "[]byte" // fallback for empty types - capture raw XML
 	}
 
 	// First try to resolve as a simple type in the schema
-	if simpleType := ctx.resolveSimpleType(xsdType); simpleType != nil {
+	if simpleType := ctx.resolveSimpleType(xsdType); simpleType != nil && !visited[simpleType.Name] {
 		// For simple types with restrictions, check if it's an enumeration
 		if simpleType.Restriction != nil && simpleType.Restriction.Base != "" {
 			// If it has enumerations, keep it as a custom type (enum)
@@ -71,7 +81,11 @@ func mapXSDTypeToGoWithContext(xsdType string, ctx *SchemaContext) string {
 				return ctx.resolveNsScopedGoName(xsdType)
 			}
 			// Otherwise, resolve to the base type (for simple restrictions)
-			return mapXSDTypeToGoWithContext(simpleType.Restriction.Base, ctx)
+			if visited == nil {
+				visited = make(map[string]bool)
+			}
+			visited[simpleType.Name] = true
+			return mapXSDTypeToGoWithContextVisited(simpleType.Restriction.Base, ctx, visited)
 		}
 		// If no restriction, treat as the simple type name
 		return ctx.resolveNsScopedGoName(xsdType)
