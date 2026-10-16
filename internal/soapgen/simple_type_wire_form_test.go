@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tnymlr/soap-go/xsd"
+	"github.com/way-platform/soap-go/xsd"
 )
 
 var errInvalidNumericFlag = errors.New("invalid numericFlag value")

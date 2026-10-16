@@ -3,8 +3,8 @@ package soapgen
 import (
 	"regexp"
 
-	"github.com/tnymlr/soap-go/internal/codegen"
-	"github.com/tnymlr/soap-go/xsd"
+	"github.com/way-platform/soap-go/internal/codegen"
+	"github.com/way-platform/soap-go/xsd"
 )
 
 // requiresLexicalFormBoolean reports whether a named simpleType restriction

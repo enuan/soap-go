@@ -29,7 +29,6 @@ var (
 	IOReadAllIdent                 = GoIdent{GoImportPath: "io", GoName: "ReadAll"}
 
 	// SOAP library types
-<<<<<<< HEAD
 	SOAPClientIdent               = GoIdent{GoImportPath: "github.com/way-platform/soap-go", GoName: "Client"}
 	SOAPClientOptionIdent         = GoIdent{GoImportPath: "github.com/way-platform/soap-go", GoName: "ClientOption"}
 	SOAPNewClientIdent            = GoIdent{GoImportPath: "github.com/way-platform/soap-go", GoName: "NewClient"}
