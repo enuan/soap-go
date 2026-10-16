@@ -63,13 +63,20 @@ func (g *Generator) Generate() error {
 	}
 
 	// Generate Go code for each schema
-	for i, schema := range g.definitions.Types.Schemas {
+	for i := range g.definitions.Types.Schemas {
+		schema := &g.definitions.Types.Schemas[i]
+
+		// Merge complexContent/extension base fields into derived types:
+		// encoding/xml requires flat structs and inherited fields would
+		// otherwise be silently dropped from the generated code.
+		flattenSchemaInheritance(schema)
+
 		filename := "types.go"
 		if i > 0 {
 			filename = fmt.Sprintf("types_%d.go", i+1)
 		}
 
-		file, err := g.generateTypesFile(&schema, g.config.PackageName, filename)
+		file, err := g.generateTypesFile(schema, g.config.PackageName, filename)
 		if err != nil {
 			return fmt.Errorf("failed to generate types file: %w", err)
 		}
