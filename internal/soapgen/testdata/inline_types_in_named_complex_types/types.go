@@ -2,7 +2,7 @@ package inline_types_in_named_complex_types
 
 import (
 	"encoding/xml"
-	soap "github.com/way-platform/soap-go"
+	soap "github.com/enuan/soap-go"
 )
 
 // RawXML captures raw XML content for untyped elements.

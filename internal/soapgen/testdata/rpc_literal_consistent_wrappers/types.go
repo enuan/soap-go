@@ -2,7 +2,7 @@ package rpc_literal_consistent_wrappers
 
 import (
 	"encoding/xml"
-	soap "github.com/way-platform/soap-go"
+	soap "github.com/enuan/soap-go"
 )
 
 // AuthenticateWrapper represents the authenticate element

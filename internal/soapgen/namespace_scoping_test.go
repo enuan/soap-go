@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/way-platform/soap-go/wsdl"
-	"github.com/way-platform/soap-go/xsd"
+	"github.com/enuan/soap-go/wsdl"
+	"github.com/enuan/soap-go/xsd"
 )
 
 // nestedInlineWSDL is a minimal WSDL containing three levels of inline
@@ -168,7 +168,7 @@ func TestXSDDateTime_Codegen(t *testing.T) {
 
 	for _, want := range []string{
 		"soap.XSDDateTime",
-		`"github.com/way-platform/soap-go"`,
+		`"github.com/enuan/soap-go"`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("expected %q in generated types.go, not found:\n%s", want, got)

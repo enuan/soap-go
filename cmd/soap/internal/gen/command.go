@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/enuan/soap-go/internal/soapgen"
+	"github.com/enuan/soap-go/wsdl"
 	"github.com/spf13/cobra"
-	"github.com/way-platform/soap-go/internal/soapgen"
-	"github.com/way-platform/soap-go/wsdl"
 )
 
 // NewCommand creates a new [cobra.Command] for the gen command.

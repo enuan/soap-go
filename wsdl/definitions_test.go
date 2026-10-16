@@ -5,9 +5,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/enuan/soap-go/wsdl"
+	"github.com/enuan/soap-go/xsd"
 	"github.com/google/go-cmp/cmp"
-	"github.com/way-platform/soap-go/wsdl"
-	"github.com/way-platform/soap-go/xsd"
 )
 
 func TestUnmarshalGlobalWeather(t *testing.T) {

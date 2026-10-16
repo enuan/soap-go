@@ -4,8 +4,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/way-platform/soap-go/internal/codegen"
-	"github.com/way-platform/soap-go/xsd"
+	"github.com/enuan/soap-go/internal/codegen"
+	"github.com/enuan/soap-go/xsd"
 )
 
 // generateSimpleTypeConstants generates Go type declarations for top-level

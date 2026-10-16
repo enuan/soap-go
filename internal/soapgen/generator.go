@@ -3,9 +3,9 @@ package soapgen
 import (
 	"fmt"
 
-	"github.com/way-platform/soap-go/internal/codegen"
-	"github.com/way-platform/soap-go/wsdl"
-	"github.com/way-platform/soap-go/xsd"
+	"github.com/enuan/soap-go/internal/codegen"
+	"github.com/enuan/soap-go/wsdl"
+	"github.com/enuan/soap-go/xsd"
 )
 
 // Config holds configuration for code generation
@@ -108,7 +108,7 @@ func (g *Generator) generateTypesFile(schema *xsd.Schema, packageName, filename 
 	file := codegen.NewFile(filename, packageName)
 
 	// Set custom package name for soap-go to use "soap" instead of "soapgo"
-	file.SetPackageName("github.com/way-platform/soap-go", "soap")
+	file.SetPackageName("github.com/enuan/soap-go", "soap")
 
 	// Create schema context for reference resolution
 	ctx := newSchemaContext(schema, g)

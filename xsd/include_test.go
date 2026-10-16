@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/way-platform/soap-go/xsd"
+	"github.com/enuan/soap-go/xsd"
 )
 
 func parseFile(t *testing.T, path string) *xsd.Schema {

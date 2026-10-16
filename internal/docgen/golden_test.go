@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/enuan/soap-go/wsdl"
 	"github.com/google/go-cmp/cmp"
-	"github.com/way-platform/soap-go/wsdl"
 )
 
 var update = flag.Bool("update", false, "update golden files")

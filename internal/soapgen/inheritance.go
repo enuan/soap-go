@@ -1,6 +1,6 @@
 package soapgen
 
-import "github.com/way-platform/soap-go/xsd"
+import "github.com/enuan/soap-go/xsd"
 
 // flattenSchemaInheritance rewrites complexContent/extension complex types
 // in-place so that every derived type carries the fields of its ancestors as a

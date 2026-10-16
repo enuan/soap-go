@@ -4,7 +4,7 @@ import (
 	"encoding/xml"
 	"testing"
 
-	"github.com/way-platform/soap-go/wsdl"
+	"github.com/enuan/soap-go/wsdl"
 )
 
 // TestGetMessageElementType_CrossNamespace verifies that when a WSDL message

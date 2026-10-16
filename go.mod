@@ -1,4 +1,4 @@
-module github.com/way-platform/soap-go
+module github.com/enuan/soap-go
 
 go 1.25.0
 
