@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/enuan/soap-go/wsdl"
 	"github.com/google/go-cmp/cmp"
-	"github.com/way-platform/soap-go/wsdl"
 )
 
 var update = flag.Bool("update", false, "update golden files")
@@ -346,4 +346,49 @@ func validateXMLNameFields(content string) error {
 	}
 
 	return nil
+}
+
+// TestInlineEnumDedupStability exercises the inline-enum dedup path with a
+// WSDL where two parents declare the same enum value set in opposite source
+// orderings. The generator must always emit the owner's source order; the
+// loop catches a regression where map-iteration randomness lets the reuser
+// win.
+func TestInlineEnumDedupStability(t *testing.T) {
+	t.Parallel()
+	const wsdlFile = "testdata/inline_enum_dedup_stability/definitions.wsdl"
+	const iterations = 100
+
+	var canonical string
+	for i := 0; i < iterations; i++ {
+		defs, err := wsdl.ParseFromFile(wsdlFile)
+		if err != nil {
+			t.Fatalf("iteration %d: parse WSDL: %v", i, err)
+		}
+		generator := NewGenerator(defs, Config{
+			PackageName:    "inline_enum_dedup_stability",
+			GenerateClient: true,
+		})
+		if err := generator.Generate(); err != nil {
+			t.Fatalf("iteration %d: generate: %v", i, err)
+		}
+
+		var combined strings.Builder
+		for _, file := range generator.Files() {
+			content, err := file.Content()
+			if err != nil {
+				t.Fatalf("iteration %d: file content: %v", i, err)
+			}
+			fmt.Fprintf(&combined, "--- %s ---\n", filepath.Base(file.Filename()))
+			combined.Write(content)
+		}
+
+		if i == 0 {
+			canonical = combined.String()
+			continue
+		}
+		if combined.String() != canonical {
+			t.Fatalf("iteration %d output differs from iteration 0:\n=== iteration 0 ===\n%s\n=== iteration %d ===\n%s",
+				i, canonical, i, combined.String())
+		}
+	}
 }

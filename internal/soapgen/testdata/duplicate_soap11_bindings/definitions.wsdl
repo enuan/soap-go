@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Regression test: two SOAP 1.1 bindings referencing the same portType
+  (e.g. plain HTTP and HTTPS endpoints of the same service). The generator
+  must emit exactly one client method per operation, not one per binding.
+-->
+<wsdl:definitions name="DuplicateBindings" targetNamespace="http://example.com/dup"
+    xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:tns="http://example.com/dup">
+  <wsdl:types>
+    <xs:schema targetNamespace="http://example.com/dup" elementFormDefault="qualified">
+      <xs:element name="Echo">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="inputMessage" type="xs:string" minOccurs="0"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="EchoResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="EchoResult" type="xs:string" minOccurs="0"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:schema>
+  </wsdl:types>
+  <wsdl:message name="EchoIn">
+    <wsdl:part name="parameters" element="tns:Echo"/>
+  </wsdl:message>
+  <wsdl:message name="EchoOut">
+    <wsdl:part name="parameters" element="tns:EchoResponse"/>
+  </wsdl:message>
+  <wsdl:portType name="EchoPortType">
+    <wsdl:operation name="Echo">
+      <wsdl:input message="tns:EchoIn"/>
+      <wsdl:output message="tns:EchoOut"/>
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="EchoBindingHttp" type="tns:EchoPortType">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http"/>
+    <wsdl:operation name="Echo">
+      <soap:operation soapAction="http://example.com/dup/Echo" style="document"/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:binding name="EchoBindingHttps" type="tns:EchoPortType">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http"/>
+    <wsdl:operation name="Echo">
+      <soap:operation soapAction="http://example.com/dup/Echo" style="document"/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="EchoService">
+    <wsdl:port name="EchoPortHttp" binding="tns:EchoBindingHttp">
+      <soap:address location="http://example.com/dup"/>
+    </wsdl:port>
+    <wsdl:port name="EchoPortHttps" binding="tns:EchoBindingHttps">
+      <soap:address location="https://example.com/dup"/>
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

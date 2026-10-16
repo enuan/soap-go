@@ -3,7 +3,7 @@ package soapgen
 import (
 	"strings"
 
-	"github.com/way-platform/soap-go/xsd"
+	"github.com/enuan/soap-go/xsd"
 )
 
 // mapXSDTypeToGo maps XSD types to Go types.
@@ -50,8 +50,13 @@ func mapXSDTypeToGo(xsdType xsd.Type) string {
 	case xsd.UnsignedLong, xsd.NonNegativeInteger, xsd.PositiveInteger:
 		return "uint64"
 
-	// Time types
-	case xsd.DateTime, xsd.Time, xsd.Date:
+	// xs:dateTime is wrapped in a tolerant carrier that accepts timezone-less
+	// inputs (which the XSD spec permits as "unspecified"). The string form
+	// here is a sentinel that convertToQualifiedType resolves into the
+	// fully-qualified soap.XSDDateTime reference plus the soap-go import.
+	case xsd.DateTime:
+		return "soap.XSDDateTime"
+	case xsd.Time, xsd.Date:
 		return "time.Time"
 	case xsd.Duration, xsd.GYearMonth, xsd.GYear, xsd.GMonthDay, xsd.GDay, xsd.GMonth:
 		return "string" // These require custom parsing (ISO 8601 / calendar-dependent)
@@ -75,7 +80,9 @@ func mapXSDTypeToGo(xsdType xsd.Type) string {
 // getRequiredImports returns the import paths required for this XSD type.
 func getRequiredImports(xsdType xsd.Type) []string {
 	switch xsdType {
-	case xsd.DateTime, xsd.Time, xsd.Date:
+	case xsd.DateTime:
+		return []string{"github.com/enuan/soap-go"}
+	case xsd.Time, xsd.Date:
 		return []string{"time"}
 	case xsd.QName:
 		return []string{"encoding/xml"}

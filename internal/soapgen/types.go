@@ -2,71 +2,112 @@ package soapgen
 
 import (
 	"strings"
+	"unicode"
 
-	"github.com/way-platform/soap-go/xsd"
+	"github.com/enuan/soap-go/xsd"
 )
 
-// toGoName converts an XML name to a Go identifier (PascalCase)
+// toGoName converts an XML name to a valid Go identifier (PascalCase).
+//
+// XSD names and enumeration values can contain characters that are not valid
+// in Go identifiers (spaces, slashes, colons, plus signs, asterisks, etc.).
+// This function splits on any non-letter, non-digit character, capitalizes
+// the first letter of each part, and preserves the rest of each part's casing
+// to maintain camelCase names like "GetWeather" or "DownloadRequest".
 func toGoName(name string) string {
 	if name == "" {
 		return ""
 	}
 
-	// Trim spaces to avoid issues with malformed XML element names
 	name = strings.TrimSpace(name)
 
-	// Split on common separators and capitalize each part
+	// Split on any character that is not a letter or digit.
+	// This handles spaces, slashes, colons, plus signs, asterisks, dots,
+	// hyphens, underscores, and any other non-identifier characters.
 	parts := strings.FieldsFunc(name, func(r rune) bool {
-		return r == '_' || r == '-' || r == '.'
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
 	})
+
+	if len(parts) == 0 {
+		return "Value"
+	}
 
 	var result strings.Builder
 	for _, part := range parts {
-		if len(part) > 0 {
-			result.WriteString(strings.ToUpper(part[:1]))
-			if len(part) > 1 {
-				result.WriteString(strings.ToLower(part[1:]))
-			}
+		if len(part) == 0 {
+			continue
+		}
+		// Capitalize first letter, preserve the rest of the casing.
+		// This maintains camelCase names (e.g. "DownloadRequest" stays as-is)
+		// while still capitalizing words from split values
+		// (e.g. "EIR Sync Error" → "EIR" + "Sync" + "Error").
+		result.WriteString(strings.ToUpper(part[:1]))
+		if len(part) > 1 {
+			result.WriteString(part[1:])
 		}
 	}
 
-	// Handle the case where name doesn't need splitting
-	if len(parts) <= 1 {
-		result.Reset()
-		result.WriteString(strings.ToUpper(name[:1]))
-		if len(name) > 1 {
-			result.WriteString(name[1:])
-		}
+	// If the result starts with a digit, prefix to make it a valid Go identifier.
+	s := result.String()
+	if len(s) > 0 && unicode.IsDigit(rune(s[0])) {
+		return "V" + s
 	}
 
-	return result.String()
+	return s
 }
 
 // mapXSDTypeToGoWithContext maps XSD types to Go types using schema context for better resolution
 func mapXSDTypeToGoWithContext(xsdType string, ctx *SchemaContext) string {
+	return mapXSDTypeToGoWithContextVisited(xsdType, ctx, nil)
+}
+
+// mapXSDTypeToGoWithContextVisited is mapXSDTypeToGoWithContext with a
+// recursion guard. Some real-world schemas declare a local simpleType whose
+// name shadows an XSD primitive (e.g. a local "duration" restricted from
+// xs:duration). Resolving the restriction base strips the namespace prefix,
+// which resolves back to the same local type. `visited` breaks that cycle and
+// falls through to the primitive mapping instead.
+func mapXSDTypeToGoWithContextVisited(xsdType string, ctx *SchemaContext, visited map[string]bool) string {
 	if xsdType == "" {
 		return "[]byte" // fallback for empty types - capture raw XML
 	}
 
 	// First try to resolve as a simple type in the schema
-	if simpleType := ctx.resolveSimpleType(xsdType); simpleType != nil {
+	if simpleType := ctx.resolveSimpleType(xsdType); simpleType != nil && !visited[simpleType.Name] {
 		// For simple types with restrictions, check if it's an enumeration
 		if simpleType.Restriction != nil && simpleType.Restriction.Base != "" {
 			// If it has enumerations, keep it as a custom type (enum)
 			if len(simpleType.Restriction.Enumerations) > 0 {
-				return toGoName(extractLocalName(xsdType))
+				return ctx.resolveNsScopedGoName(xsdType)
 			}
 			// Otherwise, resolve to the base type (for simple restrictions)
-			return mapXSDTypeToGoWithContext(simpleType.Restriction.Base, ctx)
+			if visited == nil {
+				visited = make(map[string]bool)
+			}
+			visited[simpleType.Name] = true
+			return mapXSDTypeToGoWithContextVisited(simpleType.Restriction.Base, ctx, visited)
 		}
 		// If no restriction, treat as the simple type name
-		return toGoName(extractLocalName(xsdType))
+		return ctx.resolveNsScopedGoName(xsdType)
 	}
 
 	// Then try to resolve as a complex type in the schema
 	if complexType := ctx.resolveComplexType(xsdType); complexType != nil {
 		// For named complex types, generate a Go type name
-		return toGoName(extractLocalName(xsdType))
+		return ctx.resolveNsScopedGoName(xsdType)
+	}
+
+	// When namespace scoping is enabled, any prefixed type reference that wasn't
+	// found in the current schema is a cross-namespace reference.
+	// Skip XSD namespace prefixes (xs:string, xs:int, etc.)
+	if ctx.generator != nil && ctx.generator.namespaceScopingEnabled() {
+		if colonIdx := strings.LastIndex(xsdType, ":"); colonIdx != -1 {
+			prefix := xsdType[:colonIdx]
+			nsMap := ctx.schema.NamespacePrefixMap()
+			if nsURI := nsMap[prefix]; nsURI != "" && nsURI != "http://www.w3.org/2001/XMLSchema" {
+				return ctx.resolveNsScopedGoName(xsdType)
+			}
+		}
 	}
 
 	// Check if this is a custom type (contains namespace prefix or ends with "Type")

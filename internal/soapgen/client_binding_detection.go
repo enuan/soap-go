@@ -55,9 +55,22 @@ func (g *Generator) getBindingStyle() BindingStyle {
 	return style
 }
 
-// getConsistentTypeName returns the Go type name with consistent wrapper naming
-func (g *Generator) getConsistentTypeName(xmlElementName string, bindingStyle BindingStyle) string {
+// getConsistentTypeName returns the Go type name with consistent wrapper naming.
+// nsURI is the namespace URI the element belongs to (resolved from the WSDL
+// message part's QName prefix), used to look up the Go type prefix. For
+// cross-namespace WSDLs where operations and types live in different
+// namespaces, callers must pass the element's own namespace rather than the
+// WSDL's target namespace.
+func (g *Generator) getConsistentTypeName(xmlElementName, nsURI string, bindingStyle BindingStyle) string {
 	baseName := toGoName(xmlElementName)
+
+	// Apply namespace prefix if scoping is enabled. The prefix is decided by
+	// the element's own namespace, not the containing WSDL's target namespace.
+	if g.namespaceScopingEnabled() && nsURI != "" {
+		if prefix := g.nsPrefix(nsURI); prefix != "" {
+			baseName = prefix + "_" + baseName
+		}
+	}
 
 	// Use the same logic as type generation for consistency
 	if g.shouldUseWrapperForElement(xmlElementName, bindingStyle) {
@@ -88,20 +101,10 @@ func (g *Generator) isOperationMessageElement(xmlElementName string) bool {
 	return false
 }
 
-// shouldUseWrapperForElement determines if a specific element should use wrapper naming
-// based on binding style and whether it's used in SOAP operations
-func (g *Generator) shouldUseWrapperForElement(elementName string, bindingStyle BindingStyle) bool {
-	// Classification-based approach: Use wrapper naming for operation elements in appropriate binding styles
-	if bindingStyle.Style == "rpc" {
-		// RPC style: ALL operation elements use wrappers
-		return g.isOperationMessageElement(elementName)
-	}
-
-	if bindingStyle.Style == "document" && bindingStyle.Use == "literal" {
-		// Document/Literal: Use wrapper naming for ALL operation elements for consistency
-		return g.isOperationMessageElement(elementName)
-	}
-
-	// Other binding styles: no wrapper naming
-	return false
+// shouldUseWrapperForElement returns true for all elements.
+// In XSD, elements and types occupy separate symbol spaces. In Go, they don't.
+// To avoid any possibility of collision, all element-derived structs get a
+// Wrapper suffix, while type-derived structs keep their plain name.
+func (g *Generator) shouldUseWrapperForElement(_ string, _ BindingStyle) bool {
+	return true
 }

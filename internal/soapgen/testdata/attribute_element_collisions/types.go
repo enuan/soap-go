@@ -2,7 +2,7 @@ package attribute_element_collisions
 
 import (
 	"encoding/xml"
-	"time"
+	soap "github.com/enuan/soap-go"
 )
 
 // Complex types
@@ -44,8 +44,8 @@ type MetadataInfoType struct {
 
 // TimeRangeType represents the TimeRangeType complex type
 type TimeRangeType struct {
-	Begin time.Time `xml:"Begin"`
-	End   time.Time `xml:"End"`
+	Begin soap.XSDDateTime `xml:"Begin"`
+	End   soap.XSDDateTime `xml:"End"`
 }
 
 // DownloadRequestWrapper represents the DownloadRequest element
@@ -73,8 +73,8 @@ type ConfigDataWrapper struct {
 	Enabled      *bool    `xml:"enabled,attr,omitempty"`
 }
 
-// MetadataInfo represents the MetadataInfo element
-type MetadataInfo struct {
+// MetadataInfoWrapper represents the MetadataInfo element
+type MetadataInfoWrapper struct {
 	XMLName     xml.Name `xml:"MetadataInfo"`
 	Name        string   `xml:"Name"`
 	Type        string   `xml:"Type"`

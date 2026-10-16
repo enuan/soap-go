@@ -2,9 +2,10 @@ package wsdl
 
 import (
 	"encoding/xml"
+	"fmt"
 	"os"
 
-	"github.com/way-platform/soap-go/xsd"
+	"github.com/enuan/soap-go/xsd"
 )
 
 // ParseFromFile reads a WSDL file from disk and unmarshals it.
@@ -18,15 +19,36 @@ func ParseFromFile(filename string) (*Definitions, error) {
 	if err := xml.Unmarshal(data, &defs); err != nil {
 		return nil, err
 	}
+
+	if defs.Types != nil {
+		// Imports bring in different namespaces, so they can't be merged
+		// into the parent — they sit alongside as sibling schemas. We
+		// collect them into `additional` and append after the loop rather
+		// than mutating the slice we're iterating over.
+		var additional []xsd.Schema
+		for i := range defs.Types.Schemas {
+			if err := defs.Types.Schemas[i].ResolveIncludes(filename); err != nil {
+				return nil, fmt.Errorf("resolve xs:include: %w", err)
+			}
+			imported, err := defs.Types.Schemas[i].ResolveImports(filename)
+			if err != nil {
+				return nil, fmt.Errorf("resolve xs:import: %w", err)
+			}
+			additional = append(additional, imported...)
+		}
+		defs.Types.Schemas = append(defs.Types.Schemas, additional...)
+	}
+
 	return &defs, nil
 }
 
 // Definitions represents a WSDL 1.1 file, corresponding to the <definitions> element.
 // It can handle both namespaced and non-namespaced WSDL documents.
 type Definitions struct {
-	XMLName         xml.Name `xml:"definitions"`
-	TargetNamespace string   `xml:"targetNamespace,attr"`
-	Name            string   `xml:"name,attr"`
+	XMLName         xml.Name   `xml:"definitions"`
+	TargetNamespace string     `xml:"targetNamespace,attr"`
+	Name            string     `xml:"name,attr"`
+	ExtraAttrs      []xml.Attr `xml:",any,attr"` // Captures xmlns:* namespace declarations
 
 	Imports  []Import   `xml:"import"`
 	Types    *Types     `xml:"types"`
@@ -141,6 +163,8 @@ type HTTPOperation struct {
 type BindingBody struct {
 	SOAP11Body           *SOAPBody             `xml:"http://schemas.xmlsoap.org/wsdl/soap/ body"`
 	SOAP12Body           *SOAPBody             `xml:"http://schemas.xmlsoap.org/wsdl/soap12/ body"`
+	SOAP11Header         []SOAPHeader          `xml:"http://schemas.xmlsoap.org/wsdl/soap/ header"`
+	SOAP12Header         []SOAPHeader          `xml:"http://schemas.xmlsoap.org/wsdl/soap12/ header"`
 	URLReplacement       *URLReplacement       `xml:"http://schemas.xmlsoap.org/wsdl/http/ urlReplacement"`
 	URLEncoded           *URLEncoded           `xml:"http://schemas.xmlsoap.org/wsdl/http/ urlEncoded"`
 	MIMEContent          []*MIMEContent        `xml:"http://schemas.xmlsoap.org/wsdl/mime/ content"`
@@ -154,6 +178,23 @@ type SOAPBody struct {
 	Namespace     string `xml:"namespace,attr"`
 	EncodingStyle string `xml:"encodingStyle,attr"`
 	Parts         string `xml:"parts,attr"`
+}
+
+// SOAPHeader corresponds to a <soap:header> or <soap12:header> element inside
+// the <input> or <output> of a binding operation. The message/part attributes
+// point at a <wsdl:message> and one of its <wsdl:part> entries; use and
+// namespace mirror the equivalent attributes on <soap:body>.
+//
+// Nested <soap:headerfault> elements are not modelled here: WSDLs in the wild
+// sometimes declare them with malformed references, no generator surface
+// currently consumes them, and encoding/xml silently drops unknown children,
+// so parsing is unaffected by their omission.
+type SOAPHeader struct {
+	Message       string `xml:"message,attr"`
+	Part          string `xml:"part,attr"`
+	Use           string `xml:"use,attr"`
+	Namespace     string `xml:"namespace,attr"`
+	EncodingStyle string `xml:"encodingStyle,attr"`
 }
 
 // URLReplacement corresponds to the <http:urlReplacement> element.

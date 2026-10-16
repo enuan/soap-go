@@ -3,22 +3,24 @@ package soapgen
 import (
 	"fmt"
 
-	"github.com/way-platform/soap-go/internal/codegen"
-	"github.com/way-platform/soap-go/wsdl"
-	"github.com/way-platform/soap-go/xsd"
+	"github.com/enuan/soap-go/internal/codegen"
+	"github.com/enuan/soap-go/wsdl"
+	"github.com/enuan/soap-go/xsd"
 )
 
 // Config holds configuration for code generation
 type Config struct {
-	PackageName    string
-	GenerateClient bool // Whether to generate SOAP client code
+	PackageName       string
+	GenerateClient    bool              // Whether to generate SOAP client code
+	NamespacePrefixes map[string]string // Namespace URI → short prefix for type names
 }
 
 // Generator generates Go code from WSDL definitions
 type Generator struct {
-	definitions *wsdl.Definitions
-	config      Config
-	files       []*codegen.File
+	definitions   *wsdl.Definitions
+	config        Config
+	files         []*codegen.File
+	rawXMLEmitted bool // tracks whether RawXML type has been emitted
 }
 
 // NewGenerator creates a new Generator with the given WSDL definitions and config
@@ -30,6 +32,29 @@ func NewGenerator(definitions *wsdl.Definitions, config Config) *Generator {
 	}
 }
 
+// namespaceScopingEnabled returns true if namespace-scoped type naming is active.
+func (g *Generator) namespaceScopingEnabled() bool {
+	return len(g.config.NamespacePrefixes) > 0
+}
+
+// nsPrefix returns the short prefix for a namespace URI, or "" if not configured.
+func (g *Generator) nsPrefix(namespaceURI string) string {
+	return g.config.NamespacePrefixes[namespaceURI]
+}
+
+// nsPrefixedName returns a namespace-scoped Go type name (e.g., "CBE_FlexAttr").
+// If namespace scoping is not enabled or the namespace has no prefix, returns the plain name.
+func (g *Generator) nsPrefixedName(namespaceURI, goName string) string {
+	if !g.namespaceScopingEnabled() {
+		return goName
+	}
+	prefix := g.nsPrefix(namespaceURI)
+	if prefix == "" {
+		return goName
+	}
+	return prefix + "_" + goName
+}
+
 // Generate generates Go code files from the WSDL definitions
 func (g *Generator) Generate() error {
 	// Check if we have types to generate
@@ -38,13 +63,20 @@ func (g *Generator) Generate() error {
 	}
 
 	// Generate Go code for each schema
-	for i, schema := range g.definitions.Types.Schemas {
+	for i := range g.definitions.Types.Schemas {
+		schema := &g.definitions.Types.Schemas[i]
+
+		// Merge complexContent/extension base fields into derived types:
+		// encoding/xml requires flat structs and inherited fields would
+		// otherwise be silently dropped from the generated code.
+		flattenSchemaInheritance(schema)
+
 		filename := "types.go"
 		if i > 0 {
 			filename = fmt.Sprintf("types_%d.go", i+1)
 		}
 
-		file, err := g.generateTypesFile(&schema, g.config.PackageName, filename)
+		file, err := g.generateTypesFile(schema, g.config.PackageName, filename)
 		if err != nil {
 			return fmt.Errorf("failed to generate types file: %w", err)
 		}
@@ -76,7 +108,7 @@ func (g *Generator) generateTypesFile(schema *xsd.Schema, packageName, filename 
 	file := codegen.NewFile(filename, packageName)
 
 	// Set custom package name for soap-go to use "soap" instead of "soapgo"
-	file.SetPackageName("github.com/way-platform/soap-go", "soap")
+	file.SetPackageName("github.com/enuan/soap-go", "soap")
 
 	// Create schema context for reference resolution
 	ctx := newSchemaContext(schema, g)
@@ -88,11 +120,12 @@ func (g *Generator) generateTypesFile(schema *xsd.Schema, packageName, filename 
 	file.P("package ", packageName)
 	file.P()
 
-	// Generate RawXML type definition if needed
-	if needsRawXML(schema) {
+	// Generate RawXML type definition if needed (only once per package)
+	if needsRawXML(schema) && !g.rawXMLEmitted {
 		file.P("// RawXML captures raw XML content for untyped elements.")
 		file.P("type RawXML []byte")
 		file.P()
+		g.rawXMLEmitted = true
 	}
 
 	// Separate data types from message wrapper types

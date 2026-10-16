@@ -14,10 +14,34 @@ When developing this SDK, use the WSDL and SOAP specifications in [docs](./docs)
 
 ### Module structure
 
-Multi-module repo with two `go.mod` files:
+Single-module repo (hard fork):
 
-- `/go.mod` — SDK root (minimal deps: `go-cmp`, `x/text`)
-- `/cmd/soap/go.mod` — CLI (depends on _released_ SDK version, not local)
+- `/go.mod` — SDK root + CLI (`cmd/soap`) in one module. The CLI is part of the
+  root module so `go install github.com/enuan/soap-go/cmd/soap@latest` works.
+- `/tools/go.mod` — development tooling module (not imported by the SDK).
+
+### Fork maintenance (enuan)
+
+This is the `enuan` hard fork of `way-platform/soap-go`. Fork-specific patches
+are listed in [README.md](./README.md#differences-from-upstream-base-v0292).
+
+- `origin` is `github.com/enuan/soap-go`; keep `upstream`
+  (`github.com/way-platform/soap-go`) as a remote for sync.
+- Keep patches small and independent: one fix per commit with a golden test in
+  `internal/soapgen/testdata/`.
+- To sync: `git fetch upstream --tags && git merge upstream/main` (resolve
+  rebrand conflicts), then run the full test suite.
+- Upstream does not merge external PRs; don't block on them.
+- Community fixes can be cherry-picked from `tnymlr/soap-go` with `-x`
+  (authorship preserved).
+
+Regression tests for the fork-specific fixes:
+
+- `complex_content_extension` — inherited base fields are merged
+  (recursively) into derived types.
+- `self_referential_simple_type` — local simple types shadowing XSD
+  primitives must not recurse forever.
+- `duplicate_soap11_bindings` — one client method per portType operation.
 
 ### Package dependency graph
 

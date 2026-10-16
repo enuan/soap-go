@@ -2,7 +2,7 @@ package complex_rawxml_scenarios
 
 import (
 	"encoding/xml"
-	"time"
+	soap "github.com/enuan/soap-go"
 )
 
 // RawXML captures raw XML content for untyped elements.
@@ -27,17 +27,17 @@ type FlexibleDocumentType struct {
 
 // MultiAnyType represents the MultiAnyType complex type
 type MultiAnyType struct {
-	Section1               string `xml:"section1"`
-	Section2               string `xml:"section2"`
-	LocalContent           RawXML `xml:",innerxml"`
-	TargetNamespaceContent RawXML `xml:",innerxml"`
+	Section1               string  `xml:"section1"`
+	Section2               string  `xml:"section2"`
+	LocalContent           *RawXML `xml:"##localContent"`
+	TargetNamespaceContent *RawXML `xml:"##targetnamespaceContent"`
 }
 
 // PerformanceDataType represents the PerformanceDataType complex type
 type PerformanceDataType struct {
-	Timestamp  time.Time `xml:"timestamp"`
-	Metrics    *string   `xml:"metrics,omitempty"`
-	CustomData *string   `xml:"customData,omitempty"`
+	Timestamp  soap.XSDDateTime `xml:"timestamp"`
+	Metrics    *string          `xml:"metrics,omitempty"`
+	CustomData *string          `xml:"customData,omitempty"`
 }
 
 // ValidType represents the ValidType complex type
@@ -70,10 +70,10 @@ type MixedDocumentWrapper struct {
 
 // PerformanceReportWrapper represents the PerformanceReport element
 type PerformanceReportWrapper struct {
-	XMLName    xml.Name  `xml:"http://example.com/rawxml-scenarios PerformanceReport"`
-	Timestamp  time.Time `xml:"timestamp"`
-	Metrics    *string   `xml:"metrics,omitempty"`
-	CustomData *string   `xml:"customData,omitempty"`
+	XMLName    xml.Name         `xml:"http://example.com/rawxml-scenarios PerformanceReport"`
+	Timestamp  soap.XSDDateTime `xml:"timestamp"`
+	Metrics    *string          `xml:"metrics,omitempty"`
+	CustomData *string          `xml:"customData,omitempty"`
 }
 
 // UntypedElementWrapper represents the UntypedElement element
@@ -82,15 +82,15 @@ type UntypedElementWrapper struct {
 	Value   string   `xml:",chardata"`
 }
 
-// NestedDynamicDocument represents the NestedDynamicDocument element
-type NestedDynamicDocument struct {
+// NestedDynamicDocumentWrapper represents the NestedDynamicDocument element
+type NestedDynamicDocumentWrapper struct {
 	XMLName        xml.Name `xml:"NestedDynamicDocument"`
 	OuterElement   string   `xml:"outerElement"`
 	NestedDocument RawXML   `xml:",innerxml"`
 }
 
-// ValidElement represents the ValidElement element
-type ValidElement struct {
+// ValidElementWrapper represents the ValidElement element
+type ValidElementWrapper struct {
 	XMLName      xml.Name `xml:"ValidElement"`
 	ValidElement string   `xml:"validElement"`
 }

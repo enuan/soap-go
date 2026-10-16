@@ -3,7 +3,7 @@ package soapgen
 import (
 	"testing"
 
-	"github.com/way-platform/soap-go/xsd"
+	"github.com/enuan/soap-go/xsd"
 )
 
 func TestMapXSDTypeToGo(t *testing.T) {
@@ -47,7 +47,7 @@ func TestMapXSDTypeToGo(t *testing.T) {
 		{xsd.UnsignedLong, "uint64"},
 
 		// Time types
-		{xsd.DateTime, "time.Time"},
+		{xsd.DateTime, "soap.XSDDateTime"},
 		{xsd.Time, "time.Time"},
 		{xsd.Date, "time.Time"},
 		{xsd.Duration, "string"},
@@ -80,7 +80,7 @@ func TestGetRequiredImports(t *testing.T) {
 		{xsd.String, nil},
 		{xsd.Boolean, nil},
 		{xsd.Integer, nil},
-		{xsd.DateTime, []string{"time"}},
+		{xsd.DateTime, []string{"github.com/enuan/soap-go"}},
 		{xsd.Time, []string{"time"}},
 		{xsd.Date, []string{"time"}},
 		{xsd.Duration, nil},

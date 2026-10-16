@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/way-platform/soap-go/xsd"
+	"github.com/enuan/soap-go/xsd"
 )
 
 // SchemaContext provides context for resolving references within a schema
@@ -202,6 +202,12 @@ func (ctx *SchemaContext) resolveElementRef(ref string) *xsd.Element {
 	return ctx.elementRefs[ref]
 }
 
+// resolveElementGoType returns the Go type name for an element.
+// All elements get a Wrapper suffix to avoid collisions with types.
+func (ctx *SchemaContext) resolveElementGoType(elementName string) string {
+	return ctx.scopedGoTypeName(elementName) + "Wrapper"
+}
+
 func (ctx *SchemaContext) resolveSimpleType(typeName string) *xsd.SimpleType {
 	// Handle namespace prefixes (tp:sessionidType -> sessionidType)
 	if colonIdx := strings.LastIndex(typeName, ":"); colonIdx != -1 {
@@ -216,6 +222,53 @@ func (ctx *SchemaContext) resolveComplexType(typeName string) *xsd.ComplexType {
 		typeName = typeName[colonIdx+1:]
 	}
 	return ctx.complexTypes[typeName]
+}
+
+// resolveNsScopedGoName resolves a prefixed XSD type reference (e.g., "ns3:FlexAttr")
+// to a namespace-scoped Go type name (e.g., "Core_FlexAttr").
+// Returns the plain Go name if namespace scoping is not enabled.
+func (ctx *SchemaContext) resolveNsScopedGoName(prefixedType string) string {
+	localName := extractLocalName(prefixedType)
+	goName := toGoName(localName)
+
+	if ctx.generator == nil || !ctx.generator.namespaceScopingEnabled() {
+		return goName
+	}
+
+	colonIdx := strings.LastIndex(prefixedType, ":")
+	if colonIdx == -1 {
+		// No prefix — type is in the current schema's namespace
+		return ctx.generator.nsPrefixedName(ctx.schema.TargetNamespace, goName)
+	}
+
+	prefix := prefixedType[:colonIdx]
+	nsMap := ctx.schema.NamespacePrefixMap()
+	nsURI := nsMap[prefix]
+	if nsURI == "" {
+		// Unknown prefix, use current schema's namespace
+		return ctx.generator.nsPrefixedName(ctx.schema.TargetNamespace, goName)
+	}
+
+	return ctx.generator.nsPrefixedName(nsURI, goName)
+}
+
+// currentNsPrefix returns the short namespace prefix for the current schema,
+// or "" if namespace scoping is not enabled.
+func (ctx *SchemaContext) currentNsPrefix() string {
+	if ctx.generator == nil {
+		return ""
+	}
+	return ctx.generator.nsPrefix(ctx.schema.TargetNamespace)
+}
+
+// scopedGoTypeName returns a namespace-prefixed Go type name for a type
+// declared in the current schema.
+func (ctx *SchemaContext) scopedGoTypeName(xmlName string) string {
+	goName := toGoName(xmlName)
+	if ctx.generator == nil {
+		return goName
+	}
+	return ctx.generator.nsPrefixedName(ctx.schema.TargetNamespace, goName)
 }
 
 // getInlineEnumTypeName returns the type name for an inline enum if it exists
@@ -481,11 +534,10 @@ func categorizeElements(elements []xsd.Element) ([]*xsd.Element, []*xsd.Element)
 			} else {
 				dataTypes = append(dataTypes, elem)
 			}
-		} else if elem.Type != "" {
-			// Elements with simple types should also be processed as data types
-			dataTypes = append(dataTypes, elem)
-		} else if elem.SimpleType != nil {
-			// Elements with inline simple types should also be processed as data types
+		} else {
+			// Elements with Type, SimpleType, or no type at all (implicit
+			// xs:anyType) are data types. Untyped elements still need wrapper
+			// structs so references from other types compile.
 			dataTypes = append(dataTypes, elem)
 		}
 	}

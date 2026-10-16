@@ -2,7 +2,7 @@ package case_insensitive_collisions
 
 import (
 	"encoding/xml"
-	"time"
+	soap "github.com/enuan/soap-go"
 )
 
 // Complex types
@@ -15,8 +15,8 @@ type FleetDataType struct {
 
 // RecordType represents the RecordType complex type
 type RecordType struct {
-	Id        string    `xml:"id"`
-	Timestamp time.Time `xml:"timestamp"`
+	Id        string           `xml:"id"`
+	Timestamp soap.XSDDateTime `xml:"timestamp"`
 }
 
 // UserRequestType represents the UserRequestType complex type
@@ -39,9 +39,9 @@ type GetFleetResponseWrapper struct {
 	Status       string   `xml:"status"`
 }
 
-// DataRecord represents the DataRecord element
-type DataRecord struct {
-	XMLName   xml.Name  `xml:"DataRecord"`
-	Id        string    `xml:"id"`
-	Timestamp time.Time `xml:"timestamp"`
+// DataRecordWrapper represents the DataRecord element
+type DataRecordWrapper struct {
+	XMLName   xml.Name         `xml:"DataRecord"`
+	Id        string           `xml:"id"`
+	Timestamp soap.XSDDateTime `xml:"timestamp"`
 }
