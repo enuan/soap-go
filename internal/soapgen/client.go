@@ -146,7 +146,11 @@ func (g *Generator) generateOperationMethods(file *codegen.File) error {
 	return nil
 }
 
-// getSOAPBindings returns SOAP bindings from the WSDL, preferring SOAP 1.1 over SOAP 1.2
+// getSOAPBindings returns SOAP bindings from the WSDL, preferring SOAP 1.1 over
+// SOAP 1.2. At most one binding per portType is returned: multiple bindings can
+// reference the same portType (e.g. BasicHttpBinding plus a custom or HTTPS
+// binding), and the generator must emit one client method per operation, not
+// one per binding.
 func (g *Generator) getSOAPBindings() []*wsdl.Binding {
 	var soap11Bindings []*wsdl.Binding
 	var soap12Bindings []*wsdl.Binding
@@ -161,12 +165,26 @@ func (g *Generator) getSOAPBindings() []*wsdl.Binding {
 	}
 
 	// Prefer SOAP 1.1 bindings as per README.md specification
-	if len(soap11Bindings) > 0 {
-		return soap11Bindings
+	candidates := soap11Bindings
+	if len(candidates) == 0 {
+		// Fall back to SOAP 1.2 if no SOAP 1.1 bindings are available
+		candidates = soap12Bindings
 	}
 
-	// Fall back to SOAP 1.2 if no SOAP 1.1 bindings are available
-	return soap12Bindings
+	seenPortTypes := make(map[string]bool, len(candidates))
+	result := make([]*wsdl.Binding, 0, len(candidates))
+	for _, binding := range candidates {
+		key := binding.Type
+		if portType := g.getPortTypeForBinding(binding); portType != nil {
+			key = portType.Name
+		}
+		if key != "" && seenPortTypes[key] {
+			continue
+		}
+		seenPortTypes[key] = true
+		result = append(result, binding)
+	}
+	return result
 }
 
 // getPortTypeForBinding finds the port type that matches the given binding
